@@ -17,3 +17,4 @@ This project aims to develop a system that can:
 ## Files
 - `scraping.py`: Code for web scraping eBay for card prices.
 - `recognition.py`: Code for recognizing Pokémon cards using image processing and machine learning.
+- `utils.py`: Helper functions that are frequently reused.
