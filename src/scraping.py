@@ -65,9 +65,9 @@ def fetchListings():
         soup = BeautifulSoup(response.text, "html.parser")
         
         # had to dig in the html code for this smh my head
-        listings = soup.find_all("li", class_="s-item s-item__dsa-on-bottom s-item__pl-on-bottom")
+        listings = soup.find_all("li", class_="s-item s-item__pl-on-bottom")
         
-        cardPrices=[]
+        cards=[]
         
         for listing in listings:
             
@@ -77,7 +77,7 @@ def fetchListings():
             print("Price: ", price)
             link = listing.find("a", class_="s-item__link")["href"]
             print("Link: ", link)
-            sold_date = listing.select_one(".s-item__caption--signal.POSITIVE").text
+            sold_date = listing.select_one(".s-item__caption").text
             print("Date Sold: ", sold_date)
             
             # only if they exist
@@ -88,30 +88,38 @@ def fetchListings():
                 # only append to resulting list if this comparison returns a similarity score of 70 or more
                 # without this I would get results for other cards, such as a Houndoom (not searching for this)
                 # or I would not include cards that have 1 wrong letter in the name, such as Houndoor (searching for this)
-                similarityScore = fuzz.partial_ratio(cardName.lower(), title.lower())
+                similarityScore = round(fuzz.partial_ratio(cardName.lower(), title.lower()),2)
                 if similarityScore >= SIMILARITY_THRESHOLD:
                     
-                    print("MATCH WITH ",round(similarityScore, 2),"%\nADDED TO RETURN LIST")
+                    print("MATCH WITH ",similarityScore,"%\nADDED TO RETURN LIST")
                 
-                    cardPrices.append({
+                    cards.append({
                         "title": title,
                         "price": price,
                         "link": link,
-                        "date_sold": sold_date if sold_date else "Unknown"
+                        "date_sold": sold_date if sold_date else "Unknown",
+                        "similarity": similarityScore
                     })
                     
                 print("\n======================================\n")
                     
                 # so only the first 5 matching listings are stored (for now)
-                if len(cardPrices) >= 5:
+                if len(cards) >= 5:
                     break
         
-        print(cardPrices)
-        return cardPrices
+        printFormatted(cards)
+        return cards
     else:
         
         # error msg
         print(f"Request failed with status code {response.status_code}")
 
+
+def printFormatted(cards):
+    
+    for card in cards:
+        
+        print(f"Name: {card["title"]}\nPrice: {card["price"]}\nLink: {card["price"]}\nDate Sold: {card["date_sold"]}\nSimilarity: {card["similarity"]}")
+        print("\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_\n")
 
 fetchListings()
