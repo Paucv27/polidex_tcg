@@ -119,7 +119,7 @@ def printFormatted(cards):
     
     for card in cards:
         
-        print(f"Name: {card["title"]}\nPrice: {card["price"]}\nLink: {card["price"]}\nDate Sold: {card["date_sold"]}\nSimilarity: {card["similarity"]}")
+        print(f"Name: {card["title"]}\nPrice: {card["price"]}\nLink: {card["link"]}\nDate Sold: {card["date_sold"]}\nSimilarity: {card["similarity"]}")
         print("\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_\n")
 
 fetchListings()
