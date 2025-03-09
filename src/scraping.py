@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from rapidfuzz import fuzz
+from utils import meanPrice, getStats
 
 SIMILARITY_THRESHOLD=70
 
@@ -81,7 +82,7 @@ def fetchListings():
             print("Date Sold: ", sold_date)
             
             # only if they exist
-            if title and price and link:
+            if title and price and link and not "to" in price:
                 
                 print("COMPARING :",cardName,"\nCOMPARING:", title)
                 
@@ -89,6 +90,8 @@ def fetchListings():
                 # without this I would get results for other cards, such as a Houndoom (not searching for this)
                 # or I would not include cards that have 1 wrong letter in the name, such as Houndoor (searching for this)
                 similarityScore = round(fuzz.partial_ratio(cardName.lower(), title.lower()),2)
+                print("Score: ",similarityScore)
+                
                 if similarityScore >= SIMILARITY_THRESHOLD:
                     
                     print("MATCH WITH ",similarityScore,"%\nADDED TO RETURN LIST")
@@ -101,13 +104,16 @@ def fetchListings():
                         "similarity": similarityScore
                     })
                     
-                print("\n======================================\n")
-                    
                 # so only the first 5 matching listings are stored (for now)
                 if len(cards) >= 5:
                     break
+                
+            print("\n======================================\n")
+                
+        cards = sorted(cards, key=lambda x: float(x["price"].replace("£","")), reverse=True)
         
         printFormatted(cards)
+        
         return cards
     else:
         
@@ -117,9 +123,17 @@ def fetchListings():
 
 def printFormatted(cards):
     
+    print("\n................. CARDS FETCHED ..................\n")
+    
     for card in cards:
         
         print(f"Name: {card["title"]}\nPrice: {card["price"]}\nLink: {card["link"]}\nDate Sold: {card["date_sold"]}\nSimilarity: {card["similarity"]}")
         print("\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_\n")
-
-fetchListings()
+    
+    
+#for testing
+if __name__=="__main__":
+    
+    fetchedCards=fetchListings()
+    
+    getStats(fetchedCards)

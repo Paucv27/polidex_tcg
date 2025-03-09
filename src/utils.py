@@ -2,15 +2,50 @@
 
 # if there are too many or different types, I could modularise into a utils folder and have individual helpers inside
 
-def mean(listings:list) -> float:
+def getStats(cards):
     
-    print("Getting mean prices...")
+    print("$-$-$-$ Statistics about the fetched listings $-$-$-$\n")
     
-    mean = 0
+    print("MEAN"+"-"*50+"\n")
+    mean=meanPrice(cards)
+    print("Mean price: ",mean," || Rounded: ",round(mean,2),"\n")
+    
+    print("RANGE"+"-"*50+"\n")
+    range=rangePrice(cards)
+    print("Ranges from ",range)
+    
+    
+def rangePrice(listings:list) -> str:
+    
+    min = 1000000
+    
+    max = 0
     
     for listing in listings:
         
-        mean+=listings["price"] 
+        x = float(listing["price"].replace("£",""))
         
-    return mean     
+        if x<min:
+            
+            min = x
+            
+        if x>max:
+            
+            max = x
+            
+    print(min," - ",max)
     
+    return f"{min} - {max}"
+        
+    
+def meanPrice(listings:list) -> float:
+    
+    total = 0
+    
+    for listing in listings:
+        
+        total += float(listing["price"].replace("£",""))
+        
+    print(f"Total is {total} (2dp) from {len(listings)} listings")
+        
+    return total/len(listings)
