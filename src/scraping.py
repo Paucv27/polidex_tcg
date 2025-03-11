@@ -45,7 +45,7 @@ def formatCardInfo(name,promo,number):
         str: Formatted string
     """
     
-    return f"{(name+promo+number).replace(' ','+')}"
+    return f"{(name+"+"+promo+"+"+number).replace(' ','+')}"
 
 
 def fetchListings():
@@ -66,7 +66,7 @@ def fetchListings():
         soup = BeautifulSoup(response.text, "html.parser")
         
         # had to dig in the html code for this smh my head
-        listings = soup.find_all("li", class_="s-item s-item__pl-on-bottom")
+        listings = soup.find_all("li", class_="s-item s-item__dsa-on-bottom s-item__pl-on-bottom")
         
         cards=[]
         
