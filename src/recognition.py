@@ -5,8 +5,16 @@ import numpy as np
 pytesseract.pytesseract.tesseract_cmd = r"C:\Users\pauca\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
 
 card = cv2.imread(r"data\prismatic-evolutions\sv8-5_en_161_std.jpg")
+# add reshaping, scaling...
+
+# image should be 733x1024 or something with same proportions if too big
+card = cv2.resize(card, (733, 1024))
+
 name_region = card[30:100, 140:430]
 number_region = card[960:1000, 110:210]
+
+name_region = cv2.resize(name_region, (128, 64))  # 128 width, 64 height
+number_region = cv2.resize(number_region, (128, 64))  # Same as above for number region
 
 # processes a region
 def process_region(region):
