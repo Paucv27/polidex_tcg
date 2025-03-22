@@ -13,18 +13,14 @@ card = cv2.resize(card, (733, 1024))
 name_region = card[30:100, 140:430]
 number_region = card[960:1000, 110:210]
 
-name_region = cv2.resize(name_region, (128, 64))  # 128 width, 64 height
-number_region = cv2.resize(number_region, (128, 64))  # Same as above for number region
+name_region = cv2.resize(name_region, (128, 64))  
+number_region = cv2.resize(number_region, (128, 64)) 
 
 # processes a region
 def process_region(region):
-    # Convert to grayscale
-    grey = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
     
-    # Apply a light Gaussian blur to reduce noise
+    grey = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(grey, (3, 3), 0)
-
-    # Apply adaptive thresholding (light)
     thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 
     return thresh
@@ -32,14 +28,13 @@ def process_region(region):
 name_processed = process_region(name_region)
 number_processed = process_region(number_region)
 
-# Extract text from the processed regions
+# extracts text from the preprocessed regions
 name_text = pytesseract.image_to_string(name_processed, config="--psm 7 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/")
 number_text = pytesseract.image_to_string(number_processed, config="--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789/")
 
 print("Name: ", name_text)
 print("Number: ", number_text)
 
-# Display the processed images
 cv2.imshow("Name Region Processed", name_processed)
 cv2.imshow("Number Region Processed", number_processed)
 cv2.waitKey(0)
