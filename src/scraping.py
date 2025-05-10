@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from rapidfuzz import fuzz
 from utils import meanPrice, getStats
+#cheerio equivalent for python = package for web scraping that turns info to json instead of html
 
 SIMILARITY_THRESHOLD=70
 
