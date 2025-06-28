@@ -10,7 +10,7 @@ def setUrlAndHeaders():
     
     global url, headers
 
-    url = f"https://www.ebay.co.uk/sch/i.html?_nkw={formatCardInfo(cardName,cardPromo,cardNumber)}&LH_Complete=1&LH_Sold=1"
+    url = f"https://www.ebay.co.uk/sch/i.html?_nkw={formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1"
 
     # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
@@ -24,11 +24,9 @@ def inputCardInfo():
     These are stored as global variables
     """
     
-    global cardName, cardPromo, cardNumber
+    global cardName, cardNumber
     
     cardName = input("Input card name: ")
-
-    cardPromo = input("Input card promo: ")
 
     cardNumber = input("Input card number: ")
 
@@ -53,7 +51,7 @@ def fetchListings():
     
     inputCardInfo()
     setUrlAndHeaders()
-    formatCardInfo(cardName,cardPromo,cardNumber)
+    formatCardInfo(cardName,cardNumber)
     
     print("Searching for: ",url)
     
