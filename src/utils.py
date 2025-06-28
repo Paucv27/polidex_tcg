@@ -47,5 +47,13 @@ def meanPrice(listings:list) -> float:
         total += float(listing["price"].replace("£",""))
         
     print(f"Total is {total} (2dp) from {len(listings)} listings")
+    
+    mean = 0
+    
+    try:
+        mean = total/len(listings)
+    except:
+        print("Error calculating mean - returning 0")
+            
         
-    return total/len(listings)
+    return mean

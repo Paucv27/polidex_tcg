@@ -63,6 +63,8 @@ def fetchListings():
     
     if response.status_code == 200:
         
+        print("running parser")
+        
         # parses the html to a BeautifulSoup object, which represents the document as a nested data structure
         soup = BeautifulSoup(response.text, "html.parser")
         
