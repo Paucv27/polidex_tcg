@@ -22,12 +22,17 @@ print('Filename: ',test_filename)
 
 # PRE-PROCESS SECTIONS --------------------------------------
 
-name_section = img[32:90, 134:500].copy()
+name_section = img[0:140, 0:500].copy()
 name_section = cv2.resize(name_section, (name_section.shape[1]*2, name_section.shape[0]*2), interpolation=cv2.INTER_CUBIC)
+name_section = cv2.cvtColor(name_section, cv2.COLOR_RGB2GRAY)
+# _, name_section = cv2.threshold(name_section, 180, 255, cv2.THRESH_BINARY)
 
-number_section = img[960:1000, 115:205].copy()
+number_section = img[970:990, 120:200].copy()
 number_section = cv2.resize(number_section, (number_section.shape[1]*5, number_section.shape[0]*5), interpolation=cv2.INTER_CUBIC)
+# number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
+# _, number_section = cv2.threshold(number_section, 240, 255, cv2.THRESH_BINARY_INV)
 number_section = cv2.GaussianBlur(number_section, (3,3), 0)
+# number_section = cv2.erode(number_section, (5,5), iterations=3)
 
 # GET RESULTS FROM EASYOCR -----------------------------------
 
@@ -50,7 +55,6 @@ print(number_df)
 # DRAW BBOXs -------------------------------------------------
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-
 for result in full_results:
 
     top_left = tuple(int(coord) for coord in result[0][0])
@@ -72,3 +76,15 @@ axs[2].imshow(number_section)
 axs[2].set_title('Number')
 
 plt.show()
+
+return_text = ''
+
+for result in name_results:
+
+    return_text += result[1]+' '
+
+for result in number_results:
+
+    return_text += result[1]+' '
+
+print(return_text)
