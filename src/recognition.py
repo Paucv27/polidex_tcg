@@ -1,41 +1,74 @@
+import easyocr
 import cv2
-import pytesseract
-import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from glob import glob
+from pprint import pprint
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Users\pauca\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+# IMPORT ALL IMAGES FROM DATASET ----------------------------
 
-card = cv2.imread(r"data\prismatic-evolutions\sv8-5_en_161_std.jpg")
-# add reshaping, scaling...
+images = glob('.\\data\\prismatic-evolutions\\*')
 
-# image should be 733x1024 or something with same proportions if too big
-card = cv2.resize(card, (733, 1024))
+# GET TEST IMAGE --------------------------------------------
 
-name_region = card[30:100, 140:430]
-number_region = card[960:1000, 110:210]
+test_path = images[161]
+test_filename = images[161].split('\\')[-1]
 
-name_region = cv2.resize(name_region, (128, 64))  
-number_region = cv2.resize(number_region, (128, 64)) 
+img = cv2.imread(test_path)
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-# processes a region
-def process_region(region):
-    
-    grey = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(grey, (3, 3), 0)
-    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+print('Filepath: ',test_path)
+print('Filename: ',test_filename)
 
-    return thresh
+# PRE-PROCESS SECTIONS --------------------------------------
 
-name_processed = process_region(name_region)
-number_processed = process_region(number_region)
+name_section = img[32:90, 134:500].copy()
+name_section = cv2.resize(name_section, (name_section.shape[1]*2, name_section.shape[0]*2), interpolation=cv2.INTER_CUBIC)
 
-# extracts text from the preprocessed regions
-name_text = pytesseract.image_to_string(name_processed, config="--psm 7 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/")
-number_text = pytesseract.image_to_string(number_processed, config="--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789/")
+number_section = img[960:1000, 115:205].copy()
+number_section = cv2.resize(number_section, (number_section.shape[1]*5, number_section.shape[0]*5), interpolation=cv2.INTER_CUBIC)
+number_section = cv2.GaussianBlur(number_section, (3,3), 0)
 
-print("Name: ", name_text)
-print("Number: ", number_text)
+# GET RESULTS FROM EASYOCR -----------------------------------
 
-cv2.imshow("Name Region Processed", name_processed)
-cv2.imshow("Number Region Processed", number_processed)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+reader = easyocr.Reader(['en'], gpu=False)
+
+full_results = reader.readtext(img)
+name_results = reader.readtext(name_section)
+number_results = reader.readtext(number_section)
+
+# SHOW DATAFRAME FOR BBOXs -----------------------------------
+
+full_df = pd.DataFrame(full_results, columns=['BBOX','TEXT','CONF'])
+name_df = pd.DataFrame(name_results, columns=['BBOX','TEXT','CONF'])
+number_df = pd.DataFrame(number_results, columns=['BBOX','TEXT','CONF'])
+
+print(full_df)
+print(name_df)
+print(number_df)
+
+# DRAW BBOXs -------------------------------------------------
+
+font = cv2.FONT_HERSHEY_SIMPLEX
+
+for result in full_results:
+
+    top_left = tuple(int(coord) for coord in result[0][0])
+    bottom_right = tuple(int(coord) for coord in result[0][2])
+    text = result[1]
+
+    img = cv2.rectangle(img, top_left, bottom_right, (0,255,0), 5)
+    img = cv2.putText(img, text, top_left, font, .5, (255,255,255), 2, cv2.LINE_AA)
+
+fig, axs = plt.subplots(1,3, figsize=(15,5))
+
+axs[0].imshow(img)
+axs[0].set_title('Full')
+
+axs[1].imshow(name_section)
+axs[1].set_title('Name')
+
+axs[2].imshow(number_section)
+axs[2].set_title('Number')
+
+plt.show()
