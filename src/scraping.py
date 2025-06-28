@@ -10,7 +10,7 @@ def setUrlAndHeaders():
     
     global url, headers
 
-    url = f"https://www.ebay.co.uk/sch/i.html?_nkw={formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1"
+    url = f'https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1'
 
     # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
@@ -31,20 +31,19 @@ def inputCardInfo():
     cardNumber = input("Input card number: ")
 
 
-def formatCardInfo(name,promo,number):
+def formatCardInfo(name,number):
     """
     Formats card info replacing spaces with '+' so they can be used in the search
 
     Args:
         name (str): Name of the card (e.g. Politoed EX)
-        promo (str): Promo the card belongs to (set)
         number (str): Number of the card in the set
 
     Returns:
         str: Formatted string
     """
     
-    return f"{(name+"+"+promo+"+"+number).replace(' ','+')}"
+    return f"{(name+"+"+number).replace(' ','+')}"
 
 
 def fetchListings():
@@ -85,17 +84,17 @@ def fetchListings():
             # only if they exist
             if title and price and link and not "to" in price:
                 
-                print("COMPARING :",cardName,"\nCOMPARING:", title)
+                print("COMPARING :",cardName+" "+cardNumber,"\nCOMPARING:", title)
                 
                 # only append to resulting list if this comparison returns a similarity score of 70 or more
                 # without this I would get results for other cards, such as a Houndoom (not searching for this)
                 # or I would not include cards that have 1 wrong letter in the name, such as Houndoor (searching for this)
-                similarityScore = round(fuzz.partial_ratio(cardName.lower(), title.lower()),2)
+                similarityScore = round(fuzz.partial_ratio(cardName.lower()+' '+cardNumber, title.lower()),2)
                 print("Score: ",similarityScore)
                 
                 if similarityScore >= SIMILARITY_THRESHOLD:
                     
-                    print("MATCH WITH ",similarityScore,"%\nADDED TO RETURN LIST")
+                    print("MATCH WITH ",similarityScore,"%\nADDED TO RETURN LIST"+"! - "*50)
                 
                     cards.append({
                         "title": title,
