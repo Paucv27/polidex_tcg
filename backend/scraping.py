@@ -4,9 +4,17 @@ from rapidfuzz import fuzz
 from utils import meanPrice, getStats
 #cheerio equivalent for python = package for web scraping that turns info to json instead of html
 
-SIMILARITY_THRESHOLD=70
+def setUrlAndHeaders(cardName,cardNumber):
+    """
+    Sets search URL using card name and number, and sets headers to spoof a visit
 
-def setUrlAndHeaders():
+    Args:
+        name (str): Name of the card (e.g. Politoed EX)
+        number (str): Number of the card in the set
+
+    Returns:
+        Nothing
+    """
     
     global url, headers
 
@@ -46,11 +54,11 @@ def formatCardInfo(name,number):
     return f"{(name+"+"+number).replace(' ','+')}"
 
 
-def fetchListings():
-    
-    inputCardInfo()
-    setUrlAndHeaders()
-    formatCardInfo(cardName,cardNumber)
+def fetchListings(name,number):
+
+    SIMILARITY_THRESHOLD=70
+
+    setUrlAndHeaders(name,number)
     
     print("Searching for: ",url)
     
@@ -116,8 +124,6 @@ def fetchListings():
         
         return cards
     else:
-        
-        # error msg
         print(f"Request failed with status code {response.status_code}")
 
 
