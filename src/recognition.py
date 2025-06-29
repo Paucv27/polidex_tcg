@@ -35,13 +35,11 @@ _, number_section = cv2.threshold(number_section, 30, 255, cv2.THRESH_BINARY_INV
 
 reader = easyocr.Reader(['en'], gpu=False)
 
-#full_results = reader.readtext(img)
 name_results = reader.readtext(name_section)
 number_results = reader.readtext(number_section)
 
 # SHOW DATAFRAME FOR BBOXs -----------------------------------
 
-#full_df = pd.DataFrame(full_results, columns=['BBOX','TEXT','CONF'])
 name_df = pd.DataFrame(name_results, columns=['BBOX','TEXT','CONF'])
 number_df = pd.DataFrame(number_results, columns=['BBOX','TEXT','CONF'])
 
@@ -50,16 +48,6 @@ print(name_df)
 print(number_df)
 
 # DRAW BBOXs -------------------------------------------------
-
-# font = cv2.FONT_HERSHEY_SIMPLEX
-# for result in full_results:
-
-#     top_left = tuple(int(coord) for coord in result[0][0])
-#     bottom_right = tuple(int(coord) for coord in result[0][2])
-#     text = result[1]
-
-#     img = cv2.rectangle(img, top_left, bottom_right, (0,255,0), 5)
-#     img = cv2.putText(img, text, top_left, font, .5, (255,255,255), 2, cv2.LINE_AA)
 
 fig, axs = plt.subplots(1,3, figsize=(15,5))
 
