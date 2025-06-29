@@ -1,4 +1,4 @@
-# Pokémon Trading Card Recognition
+# Pokémon Trading Card Recognition DEV BRANCH
 
 This project aims to develop a system that can:
 1. Scrape recent sale prices of Pokémon cards from eBay using web scraping.
