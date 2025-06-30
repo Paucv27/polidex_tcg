@@ -39,9 +39,6 @@ const SubmitCardFrom = ({}) => {
         } catch(e) {
             console.error("Failed to parse JSON:", e);
         }
-
-        const result = await response.json();
-        console.log(result);
     };
 
 
