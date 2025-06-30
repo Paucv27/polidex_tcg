@@ -36,7 +36,7 @@ const SubmitCardFrom = ({}) => {
         try {
             const result = JSON.parse(text);
             console.log("Parsed JSON:", result);
-        } catch(e) {
+        } catch(e) { 
             console.error("Failed to parse JSON:", e);
         }
     };
