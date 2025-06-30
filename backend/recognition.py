@@ -93,6 +93,8 @@ def process_card(card_file):
 
     clean_name = process_name(name_results)
     clean_number = process_number(number_results)
+    
+    print("DONE PROCESSING")
 
     return clean_name, clean_number
 
