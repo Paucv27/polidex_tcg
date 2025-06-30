@@ -54,11 +54,21 @@ def formatCardInfo(name,number):
     return f"{(name+"+"+number).replace(' ','+')}"
 
 
-def fetchListings(name,number):
+def fetchListings(cardName,cardNumber):
+    """
+    Scrapes ebay search for top 5 matches of the specified card (in order of most recently sold)
+
+    Args:
+        cardName (str): Card Name
+        cardNumber (str): Card Number in Set
+
+    Returns:
+        List[dict]: Fetched listings in dict format
+    """
 
     SIMILARITY_THRESHOLD=70
 
-    setUrlAndHeaders(name,number)
+    setUrlAndHeaders(cardName,cardNumber)
     
     print("Searching for: ",url)
     
@@ -69,15 +79,19 @@ def fetchListings(name,number):
     if response.status_code == 200:
         
         print("running parser")
-        
         # parses the html to a BeautifulSoup object, which represents the document as a nested data structure
         soup = BeautifulSoup(response.text, "html.parser")
         
+        print(response.url)
+        print(response.status_code)
+        
+        print("finding listings")
         # had to dig in the html code for this smh my head
         listings = soup.find_all("li", class_="s-item s-item__dsa-on-bottom s-item__pl-on-bottom")
         
         cards=[]
         
+        print("running loop...")
         for listing in listings:
             
             title = listing.select_one(".s-item__title").text
@@ -121,6 +135,8 @@ def fetchListings(name,number):
         cards = sorted(cards, key=lambda x: float(x["price"].replace("£","")), reverse=True)
         
         printFormatted(cards)
+        
+        getStats(cards)
         
         return cards
     else:
