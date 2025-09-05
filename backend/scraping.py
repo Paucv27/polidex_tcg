@@ -1,29 +1,8 @@
-import requests
 from bs4 import BeautifulSoup
 from rapidfuzz import fuzz
 from utils import meanPrice, getStats
-#cheerio equivalent for python = package for web scraping that turns info to json instead of html
-
-def setUrlAndHeaders(cardName,cardNumber):
-    """
-    Sets search URL using card name and number, and sets headers to spoof a visit
-
-    Args:
-        name (str): Name of the card (e.g. Politoed EX)
-        number (str): Number of the card in the set
-
-    Returns:
-        Nothing
-    """
-    
-    global url, headers
-
-    url = f'https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1'
-
-    # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-               "Accept-Language": "en-GB,en;q=0.9",
-               "Referer": "https://www.google.com/",}
+from playwright.sync_api import sync_playwright
+#cheerio equivalent for python = package for web scraping that turns info to json instead of html ?
 
 
 def inputCardInfo():
@@ -66,41 +45,68 @@ def fetchListings(cardName,cardNumber):
         List[dict]: Fetched listings in dict format
     """
 
-    SIMILARITY_THRESHOLD=70
+    SIMILARITY_THRESHOLD=65
 
-    setUrlAndHeaders(cardName,cardNumber)
+    #setUrlAndHeaders(cardName,cardNumber)
+    url = f"https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{cardName}+{cardNumber}&LH_Complete=1&LH_Sold=1"
     
     print("Searching for: ",url)
     
     # scrapes the whole html page specified in the url (containing the formatted card info)
-    # headers dict is used to spoof a visit to the page
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
+
+    with sync_playwright() as p:
+
+        browser = p.chromium.launch(headless=True)  
+        # headless=True means no window pops up
+        page = browser.new_page()
+
+        # helps avoid bot detection
+        page.set_extra_http_headers({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+            "Accept-Language": "en-GB,en;q=0.9"
+        })
+
+        page.goto(url)
+
+        # waits until at least one listing appears instead of the captcha page
+        page.wait_for_selector("li.s-item", timeout=10000)
+
+        html = page.content()
+
+        soup = BeautifulSoup(html, "html.parser")
         
-        print("running parser")
-        # parses the html to a BeautifulSoup object, which represents the document as a nested data structure
-        soup = BeautifulSoup(response.text, "html.parser")
-        
-        print(response.url)
-        print(response.status_code)
+        print(page.url)
+            
+        if "splashui/challenge" in page.url:
+            print("BLOCKED BY CAPTCHA")
+            return
         
         print("finding listings")
         # had to dig in the html code for this smh my head
-        listings = soup.find_all("li", class_="s-item s-item__dsa-on-bottom s-item__pl-on-bottom")
+        # should make this broader but cba right now
+        listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--overflow")
         
         cards=[]
         
         print("running loop...")
-        for listing in listings:
+
+        for listing in listings: 
             
-            title = listing.select_one(".s-item__title").text
+            # same issue here, these classes are too specific and change frequently so I need a broader solution
+            title_span = listing.find("span", class_="su-styled-text primary default")
+            title = title_span.text.strip() if title_span else "N/A"
             print("Title: ", title)
-            price = listing.select_one(".s-item__price").text
+
+            price_span = listing.find("span", class_="su-styled-text positive bold large-1 s-card__price")
+            price = price_span.text.strip() if price_span else "£0.00"
             print("Price: ", price)
-            link = listing.find("a", class_="s-item__link")["href"]
+
+            link_a = listing.find("a", class_="su-link")
+            link = link_a["href"] if link_a else "N/A"
             print("Link: ", link)
-            sold_date = listing.select_one(".s-item__caption").text
+
+            sold_date_span = listing.find("span", class_="su-styled-text positive default")
+            sold_date = sold_date_span.text.strip() if sold_date_span else "N/A"
             print("Date Sold: ", sold_date)
             
             # only if they exist
@@ -137,10 +143,10 @@ def fetchListings(cardName,cardNumber):
         printFormatted(cards)
         
         getStats(cards)
+
+        browser.close()
         
         return cards
-    else:
-        print(f"Request failed with status code {response.status_code}")
 
 
 def printFormatted(cards):
@@ -156,6 +162,6 @@ def printFormatted(cards):
 #for testing
 if __name__=="__main__":
     
-    fetchedCards=fetchListings()
+    fetchedCards=fetchListings("Leafeon EX", "006/131")
     
     getStats(fetchedCards)
