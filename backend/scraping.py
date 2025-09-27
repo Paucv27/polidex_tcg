@@ -48,7 +48,7 @@ def fetchListings(cardName,cardNumber):
     SIMILARITY_THRESHOLD=65
 
     #setUrlAndHeaders(cardName,cardNumber)
-    url = f"https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{cardName}+{cardNumber}&LH_Complete=1&LH_Sold=1"
+    url = f"https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{cardName}+{cardNumber}&LH_Complete=1&LH_Sold=1".replace(" ","")
     
     print("Searching for: ",url)
     
@@ -69,7 +69,7 @@ def fetchListings(cardName,cardNumber):
         page.goto(url)
 
         # waits until at least one listing appears instead of the captcha page
-        page.wait_for_selector("li.s-item", timeout=10000)
+        page.wait_for_selector("li.s-card", timeout=10000)
 
         html = page.content()
 
@@ -83,8 +83,8 @@ def fetchListings(cardName,cardNumber):
         
         print("finding listings")
         # had to dig in the html code for this smh my head
-        # should make this broader but cba right now
-        listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--overflow")
+        # should make this broader but right now this works for testing
+        listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--dark-solt-links-blue s-card--overflow")
         
         cards=[]
         
@@ -142,7 +142,7 @@ def fetchListings(cardName,cardNumber):
         
         printFormatted(cards)
         
-        getStats(cards)
+        getStats(cards) # gotta send this to front-end too
 
         browser.close()
         

@@ -86,7 +86,7 @@ def process_card(card_file):
     number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
     _, number_section = cv2.threshold(number_section, 30, 255, cv2.THRESH_BINARY_INV)
 
-    reader = easyocr.Reader(['en'], gpu=False)
+    reader = easyocr.Reader(['en'], gpu=True)
 
     name_results = reader.readtext(name_section)
     number_results = reader.readtext(number_section)

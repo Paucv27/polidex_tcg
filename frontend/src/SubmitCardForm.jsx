@@ -25,6 +25,8 @@ const SubmitCardFrom = ({}) => {
         const formData = new FormData();
         formData.append('image', selectedFile);
 
+        console.log("Submitted card to Polidex - Awaiting response...")
+
         const response = await fetch('http://localhost:5000/process-image', {
             method: 'POST',
             body: formData,
@@ -36,6 +38,9 @@ const SubmitCardFrom = ({}) => {
         try {
             const result = JSON.parse(text);
             console.log("Parsed JSON:", result);
+
+            // TODO display results with html to allow user to check their card stats and the listings they were extracted from (currently 5, should get larger samples later on)
+            // TODO prompt user for accuracy feedback (simple accuracy meter + optional text)
         } catch(e) { 
             console.error("Failed to parse JSON:", e);
         }
