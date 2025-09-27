@@ -1,9 +1,8 @@
 # Pokémon Trading Card Recognition DEV BRANCH
 
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-.venv/scripts/activate
-flask run in backend
-npm run dev in frontend
+- venvscript.ps1
+- flask run
+- npm run dev
 
 This project aims to develop a system that can:
 1. Scrape recent sale prices of Pokémon cards from eBay using web scraping.
