@@ -4,6 +4,9 @@
 
 def getStats(cards):
     
+    if not cards:
+        return
+    
     print("$-$-$-$ Statistics about the fetched listings $-$-$-$\n")
     
     print("MEAN"+"-"*50+"\n")
@@ -18,7 +21,6 @@ def getStats(cards):
 def rangePrice(listings:list) -> str:
     
     min = 1000000
-    
     max = 0
     
     for listing in listings:
@@ -26,11 +28,9 @@ def rangePrice(listings:list) -> str:
         x = float(listing["price"].replace("£",""))
         
         if x<min:
-            
             min = x
             
         if x>max:
-            
             max = x
             
     print(min," - ",max)
