@@ -10,6 +10,7 @@ def setUrlAndHeaders():
     
     global url, headers
 
+    # maybe switch to ebay API
     url = f'https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1'
 
     # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
@@ -68,7 +69,7 @@ def fetchListings():
         # had to dig in the html code for this smh my head
         # keeps changing
         print(soup)
-        with open("soup.txt", "w") as file:
+        with open("soup.txt", "w", encoding="utf-8") as file:
             file.write(soup.prettify())
             file.close()
         # right now we are getting blocked by a bot checker probs
@@ -118,7 +119,7 @@ def fetchListings():
             print("\n======================================\n")
                 
         # this might need a fix
-        cards = sorted(cards, key=lambda x: (float(x["price"].replace("£","")).replace(",","")), reverse=True)
+        cards = sorted(cards, key=lambda x: (float(x["price"].replace(",","").replace("£",""))), reverse=True)
         
         printFormatted(cards)
         
