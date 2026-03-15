@@ -60,25 +60,32 @@ def fetchListings():
     
     if response.status_code == 200:
         
-        print("running parser")
+        print("running parser...")
         
         # parses the html to a BeautifulSoup object, which represents the document as a nested data structure
         soup = BeautifulSoup(response.text, "html.parser")
         
         # had to dig in the html code for this smh my head
-        listings = soup.find_all("li", class_="s-item s-item__dsa-on-bottom s-item__pl-on-bottom")
-        
+        # keeps changing
+        print(soup)
+        with open("soup.txt", "w") as file:
+            file.write(soup.prettify())
+            file.close()
+        # right now we are getting blocked by a bot checker probs
+        listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--overflow")
+        print(listings)
         cards=[]
         
         for listing in listings:
             
-            title = listing.select_one(".s-item__title").text
+            # these also keep changing
+            title = listing.select_one(".s-card__title").text
             print("Title: ", title)
-            price = listing.select_one(".s-item__price").text
+            price = listing.select_one(".s-card__price").text
             print("Price: ", price)
-            link = listing.find("a", class_="s-item__link")["href"]
+            link = listing.find("a", class_="s-card__link")["href"]
             print("Link: ", link)
-            sold_date = listing.select_one(".s-item__caption").text
+            sold_date = listing.select_one(".s-card__caption").text
             print("Date Sold: ", sold_date)
             
             # only if they exist
@@ -110,7 +117,8 @@ def fetchListings():
                 
             print("\n======================================\n")
                 
-        cards = sorted(cards, key=lambda x: float(x["price"].replace("£","")), reverse=True)
+        # this might need a fix
+        cards = sorted(cards, key=lambda x: (float(x["price"].replace("£","")).replace(",","")), reverse=True)
         
         printFormatted(cards)
         
