@@ -25,7 +25,7 @@ def rangePrice(listings:list) -> str:
     
     for listing in listings:
         
-        x = float(listing["price"].replace("£",""))
+        x = listing["price"]
         
         if x<min:
             min = x
@@ -44,7 +44,7 @@ def meanPrice(listings:list) -> float:
     
     for listing in listings:
         
-        total += float(listing["price"].replace("£",""))
+        total += listing["price"]
         
     print(f"Total is {total} (2dp) from {len(listings)} listings")
     

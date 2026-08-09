@@ -9,61 +9,6 @@ from utils import meanPrice, getStats
 
 SIMILARITY_THRESHOLD=70
 
-def setUrlAndHeaders():
-    
-    global url, headers
-
-    # maybe switch to ebay API
-    url = f'https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1'
-
-    # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
-    # temp
-    ua = UserAgent()
-    
-    headers = {
-        "User-Agent": ua.random,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-GB,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "DNT": "1",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Cache-Control": "max-age=0",
-    }
-
-
-def inputCardInfo():
-    """
-    Get user input in terminal for card name, promo and number
-    These are stored as global variables
-    """
-    
-    global cardName, cardNumber
-    
-    cardName = input("Input card name: ")
-
-    cardNumber = input("Input card number: ")
-
-
-def formatCardInfo(name,number):
-    """
-    Formats card info replacing spaces with '+' so they can be used in the search
-
-    Args:
-        name (str): Name of the card (e.g. Politoed EX)
-        number (str): Number of the card in the set
-
-    Returns:
-        str: Formatted string
-    """
-    
-    return f"{(name+"+"+number).replace(' ','+')}"
-
-
 def fetchListings():
     
     inputCardInfo()
@@ -92,13 +37,14 @@ def fetchListings():
             
             # had to dig in the html code for this smh my head
             # keeps changing
-            print(soup)
             with open("soup.txt", "w", encoding="utf-8") as file:
                 file.write(soup.prettify())
                 file.close()
                 
-            # right now we are getting blocked by a bot checker probs
-            listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--overflow")
+            # ERRORS:
+            # 1. Sometimes scraper gets blocked by bot checker
+            # 2. classname keeps changing, so need to search the html structure for the actual class name
+            listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--pagination-below s-card--overflow s-card--overflow__bottom s-card--su-overflow")
             if not listings:
                 print("\nProbably blocked by Bot checker :(\ncheck soup.txt for actual HTML structure")
                 return []
@@ -158,8 +104,61 @@ def fetchListings():
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
         return []
-        
+    
 
+def setUrlAndHeaders():
+    
+    global url, headers
+
+    # maybe switch to ebay API
+    url = f'https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{formatCardInfo(cardName,cardNumber)}&LH_Complete=1&LH_Sold=1'
+
+    # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
+    # temp
+    ua = UserAgent()
+    
+    headers = {
+        "User-Agent": ua.random,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Cache-Control": "max-age=0",
+    }
+
+
+def inputCardInfo():
+    """
+    Get user input in terminal for card name, promo and number
+    These are stored as global variables
+    """
+    
+    global cardName, cardNumber
+    
+    cardName = input("Input card name: ")
+
+    cardNumber = input("Input card number: ")
+
+
+def formatCardInfo(name,number):
+    """
+    Formats card info replacing spaces with '+' so they can be used in the search
+
+    Args:
+        name (str): Name of the card (e.g. Politoed EX)
+        number (str): Number of the card in the set
+
+    Returns:
+        str: Formatted string
+    """
+    
+    return f"{(name+"+"+number).replace(' ','+')}"        
 
 def printFormatted(cards):
     
