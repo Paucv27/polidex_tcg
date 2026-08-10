@@ -1,3 +1,5 @@
 .venv/
 data/
 soup.txt
+/frontend
+/src/__pycache__
