@@ -2,58 +2,40 @@
 
 # if there are too many or different types, I could modularise into a utils folder and have individual helpers inside
 
-def getStats(cards):
+import math
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def getStats(cards: list):
     
-    if not cards:
+    if not cards or len(cards) == 0:
+        logger.warning("No listings to analyze :(")
         return
     
-    print("$-$-$-$ Statistics about the fetched listings $-$-$-$\n")
+    total = getPriceTotal(cards)
+    avg = getPriceAvg(cards)
+    range = getPriceRange(cards)
     
-    print("MEAN"+"-"*50+"\n")
-    mean=meanPrice(cards)
-    print("Mean price: ",mean," || Rounded: ",round(mean,2),"\n")
+    logger.info("Total is %s (2dp) from %d listings", round(total, 2), len(cards))
+    logger.info("Mean price: %s | Rounded (2dp): %s", avg, round(avg, 2))
+    logger.info("Ranges from %s", range)
+
+
+def getPriceTotal(listings:list) -> float:   
     
-    print("RANGE"+"-"*50+"\n")
-    range=rangePrice(cards)
-    print("Ranges from ",range)
+    return sum(listing["price"] for listing in listings)   
     
     
-def rangePrice(listings:list) -> str:
+def getPriceRange(listings:list) -> str:
     
-    min = 1000000
-    max = 0
-    
-    for listing in listings:
-        
-        x = listing["price"]
-        
-        if x<min:
-            min = x
-            
-        if x>max:
-            max = x
-            
-    print(min," - ",max)
-    
-    return f"{min} - {max}"
+    return f"{min(listing['price'] for listing in listings)} - {max(listing['price'] for listing in listings)}"
         
     
-def meanPrice(listings:list) -> float:
+def getPriceAvg(listings:list) -> float:
     
-    total = 0
-    
-    for listing in listings:
+    total = getPriceTotal(listings)   
+    avg = 0 if len(listings) == 0 else total/len(listings)          
         
-        total += listing["price"]
-        
-    print(f"Total is {total} (2dp) from {len(listings)} listings")
-    
-    mean = 0
-    
-    try:
-        mean = total/len(listings)
-    except:
-        print("Error calculating mean - returning 0")
-            
-        
-    return mean
+    return avg

@@ -5,8 +5,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from glob import glob
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def test():
+    logger.info("Running test function...")
 
     # IMPORT ALL IMAGES FROM DATASET ----------------------------
 
@@ -21,8 +26,8 @@ def test():
     img = cv2.resize(img, (img.shape[1]*3, img.shape[0]*3), interpolation=cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    print('Filepath: ',test_path)
-    print('Filename: ',test_filename)
+    logger.info('Filepath: %s', test_path)
+    logger.info('Filename: %s', test_filename)
 
     # SECTIONS ---------------------------------------------------
 
@@ -47,8 +52,8 @@ def test():
     number_df = pd.DataFrame(number_results, columns=['BBOX','TEXT','CONF'])
 
     #print(full_df)
-    print(name_df)
-    print(number_df)
+    logger.info("Name DF:\n%s\n", name_df)
+    logger.info("Number DF:\n%s\n", number_df)
 
     # DRAW BBOXs -------------------------------------------------
 
@@ -66,12 +71,14 @@ def test():
     clean_name = process_name(name_results)
     clean_number = process_number(number_results)
 
-    print(clean_name,clean_number)
+    logger.info("Clean Name: %s", clean_name)
+    logger.info("Clean Number: %s", clean_number)
 
     plt.show()
 
 
 def process_card(card_file):
+    logger.info("Processing card...")
     
     file = card_file.read()
     npimg = np.frombuffer(file, np.uint8)
@@ -81,10 +88,12 @@ def process_card(card_file):
     name_section = img[0:140*3, 0:500*3].copy()
     name_section = cv2.cvtColor(name_section, cv2.COLOR_RGB2GRAY)
     _, name_section = cv2.threshold(name_section, 40, 255, cv2.THRESH_BINARY_INV)
+    name_section = cv2.medianBlur(name_section, 5)
 
     number_section = img[960*3:1000*3, 115*3:205*3].copy()
     number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
     _, number_section = cv2.threshold(number_section, 30, 255, cv2.THRESH_BINARY_INV)
+    number_section = cv2.medianBlur(number_section, 5)
 
     reader = easyocr.Reader(['en'], gpu=True)
 
@@ -93,32 +102,26 @@ def process_card(card_file):
 
     clean_name = process_name(name_results)
     clean_number = process_number(number_results)
+    logger.info("Processed Name: %s | Processed Number: %s", clean_name, clean_number)
     
-    print("DONE PROCESSING")
+    logger.info("DONE PROCESSING")
 
     return clean_name, clean_number
 
 
 def process_name(name_results):
+    logger.info("Processing name results...")
+    logger.info("^^^ This only processes the first result, as this is most likely to be the name")
 
-    text = ''
-    results_popped = 0
-
-    for result in name_results:
-
-        text = text+result[1]+' '
-        results_popped += 1
-
-        if results_popped == 1:
-            break
-    
-    text = re.sub(r'[^a-zA-Z ]', '', text)
+    top_result = name_results[0][1]
+    text = re.sub(r'[^a-zA-Z ]', '', top_result)
 
     return text
 
 
 def process_number(number_results):
-
+    logger.info("Processing number results...")
+    logger.info("^^^ This processes all results, as the number might be split across multiple detections")
     text = ''
 
     for result in number_results:
@@ -126,6 +129,7 @@ def process_number(number_results):
         filtered = re.sub(r'[^0-9/]', '', result[1])
         text += filtered+' '
 
+    # hopes and prayers in case the OCR misreads the number and doesnt include a slash
     if '/' not in text:
         text = text[:3] + '/' + text[3:]
 
