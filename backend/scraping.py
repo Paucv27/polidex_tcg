@@ -12,7 +12,19 @@ logger = logging.getLogger(__name__)
 
 SIMILARITY_THRESHOLD=70
 
-def fetchListings(cardName, cardNumber):
+def fetchListings(cardName, cardNumber) -> dict:
+    """
+    Uses card name and number to search eBay for recently sold listings. 
+    Might get blocked by bot checks or fail because of a change in html structure (check soup.txt).
+
+    Args:
+        cardName (str): Detected card name from the image.
+        cardNumber (str): Detected card number from the image.
+
+    Returns:
+        dict: A dictionary containing: 'detected': The detected name and number, 'cards': The fetched listings, and 'stats': Price statistics about the fetched listings. 
+        Returns an empty dictionary if the request failed or was blocked by eBay's bot checker.
+    """
     
     url, headers = setUrlAndHeaders(cardName, cardNumber)
 
@@ -44,9 +56,15 @@ def fetchListings(cardName, cardNumber):
             listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--pagination-below s-card--overflow s-card--overflow__bottom s-card--su-overflow")
             if not listings:
                 logger.error("Probably blocked by Bot checker :( -> check soup.txt for actual HTML structure or wait a bit before retrying")
-                return []
+                return {
+                    "error": "Failed to fetch listings, possibly blocked by eBay's bot checker. Check soup.txt for actual HTML structure or wait a bit before retrying.", 
+                    "detected": {
+                        "name": cardName, 
+                        "number": cardNumber
+                    }
+                }
             
-            cards=[]
+            cards = []
             for listing in listings:
                 
                 # these also keep changing
@@ -55,7 +73,7 @@ def fetchListings(cardName, cardNumber):
                 link = listing.find("a", class_="s-card__link")["href"]
                 sold_date = listing.select_one(".s-card__caption").text
                 
-                logger.info("Card: %s", title)
+                logger.debug("Card: %s", title)
                 logger.debug("Info: %s | %s | %s", price, link, sold_date)
                 
                 # only if they exist
@@ -67,7 +85,7 @@ def fetchListings(cardName, cardNumber):
                     logger.debug("Similarity Score (2dp): %s", similarityScore)
 
                     if similarityScore >= SIMILARITY_THRESHOLD:
-                        logger.info("^^^^^^^^^ card added to return list ^^^^^^^^^\n")
+                        logger.debug("^^^^^^^^^ card added to return list ^^^^^^^^^\n")
                     
                         cards.append({
                             "title": title,
@@ -75,27 +93,59 @@ def fetchListings(cardName, cardNumber):
                             "link": link,
                             "date_sold": sold_date if sold_date else "Unknown",
                             "similarity": similarityScore,
-                            "cardName": cardName,
-                            "cardNumber": cardNumber
                         })
                         
-                    # so only the first 5 matching listings are stored (for now)
-                    if len(cards) >= 5:
+                    if len(cards) >= 10:
                         break
                     
-            # this might need a fix
-            cards = sorted(cards, key=lambda x: x["price"], reverse=True)
-            printFormatted(cards)
-            
-            return cards
-        else:
-            # error msg
-            logger.error(f"Request failed with status code {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request error: {e}")
-        return []
-    
+            if not cards:
+                logger.error("No listings found with sufficient similarity to the detected card name and number.")
+                return {
+                    "error": "No listings found with sufficient similarity to the detected card name and number.",
+                    "detected": {
+                        "name": cardName, 
+                        "number": cardNumber
+                    }
+                }
 
+            cards = sorted(cards, key=lambda x: x["price"], reverse=True)
+            total, avg, min, max = getStats(cards)
+            logger.debug(printFormatted(cards))
+            
+            result = {
+                "detected": {
+                    "name": cardName,
+                    "number": cardNumber
+                },
+                "cards": cards,
+                "stats": {
+                    "total": total,
+                    "avg": avg,
+                    "min": min,
+                    "max": max
+                }
+            }
+            
+            return result
+        else:
+            return {
+                "error": f"Request failed with status code {response.status_code}", 
+                "detected": {
+                    "name": cardName, 
+                    "number": cardNumber
+                    }
+                }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request exception: {e}")
+        return {
+            "error": f"Request exception: {e}", 
+            "detected": {
+                "name": cardName, 
+                "number": cardNumber
+                }
+            }
+
+    
 def setUrlAndHeaders(cardName, cardNumber):
 
     # maybe switch to ebay API

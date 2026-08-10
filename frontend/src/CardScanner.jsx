@@ -4,10 +4,12 @@ import './CardScanner.css';
 const CardScanner = () => {
     const [preview, setPreview] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
-    const [results, setResults] = useState(null);
+    const [cards, setCards] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [noResults, setNoResults] = useState(false);
+    const [noCards, setNoCards] = useState(false);
+    const [insights, setInsights] = useState(null);
+    const [detectedCard, setDetectedCard] = useState(null);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -26,8 +28,10 @@ const CardScanner = () => {
 
             setSelectedFile(file);
             setPreview(URL.createObjectURL(file));
-            setResults(null);
+            setCards(null);
             setError(null);
+            setInsights(null);
+            setDetectedCard(null);
         }
     };
 
@@ -41,8 +45,8 @@ const CardScanner = () => {
 
         setIsLoading(true);
         setError(null);
-        setResults(null);
-        setNoResults(false);
+        setCards(null);
+        setNoCards(false);
 
         const formData = new FormData();
         formData.append('image', selectedFile);
@@ -62,12 +66,22 @@ const CardScanner = () => {
                 const result = JSON.parse(text);
                 console.log('Parsed JSON:', result);
 
-                if(result && result.result && result.result.length > 0) {
-                    setResults(result);
-                    setNoResults(false);
-                } else{
-                    setResults(null);
-                    setNoResults(true);
+                if(result.error) {
+                    setError(result.error);
+                    setNoCards(false);
+                    setCards(null);
+                    setInsights(null);
+                    setDetectedCard(result.detected);
+                } else if (result.cards && result.cards.length > 0) {
+                    setCards(result.cards);
+                    setInsights(result.stats);
+                    setDetectedCard(result.detected);
+                    setNoCards(false);
+                } else {
+                    setCards(null);
+                    setInsights(null);
+                    setDetectedCard(null);
+                    setNoCards(true);
                 }
             } catch (parseError) {
                 console.error('Failed to parse JSON:', parseError);
@@ -89,7 +103,7 @@ const CardScanner = () => {
                         <h1 className="title" style={{ color: '#1e7727' }}>
                             Polidex TCG Scanner
                         </h1>
-                        <p className="subtitle">Get insights about your Pokémon cards!</p>
+                        <p className="subtitle">Get insights about your Pokémon cards !</p>
                         <p style={{ fontSize: '24px' }}>🀥 🀣 🀦 🀧 🀨</p>
                     </div>
                     
@@ -103,7 +117,7 @@ const CardScanner = () => {
                                         onClick={() => {
                                             setPreview(null);
                                             setSelectedFile(null);
-                                            setResults(null);
+                                            setCards(null);
                                         }}
                                     >
                                         ✕
@@ -112,8 +126,8 @@ const CardScanner = () => {
                             ) : (
                                 <div className="placeholder">
                                     <div className="placeholder-icon">◓</div>
-                                    <p>No card selected</p>
-                                    <span className="placeholder-sub">Upload an image to begin</span>
+                                    <p>CARD PREVIEW</p>
+                                    <span className="placeholder-sub">Upload an image to begin !</span>
                                 </div>
                             )}
                         </div>
@@ -145,12 +159,6 @@ const CardScanner = () => {
                                 )}
                             </button>
                         </div>
-
-                        {error && (
-                            <div className="error-message">
-                                !! {error}
-                            </div>
-                        )}
                     </form>
                 </div>
 
@@ -163,40 +171,76 @@ const CardScanner = () => {
                         </div>
                     )}
 
-                    {!isLoading && noResults && (
+                    {!isLoading && (error || noCards) && (
                         <div className="no-results-state">
                             <div className="no-results-icon">⚠</div>
                             <h3>Oops! Something unexpected happened...</h3>
                             <p>
                                 Sometimes the scanner doesn't correctly detect the cards, 
                                 or the scraper gets blocked by eBay, sorry! 
-                                Try again with a different card maybe?
+                                Maybe try again with a different card?
                             </p>
+                            <p style={{ color: '#00290787', fontSize: '10px' }}>Error: {error}</p>
+                            <p style={{ color: '#005a3687', fontSize: '10px' }}>Detected Card: {detectedCard?.name || 'Unknown'} #{detectedCard?.number || '???'}</p>
                             <button 
                                 className="btn btn-retry"
                                 onClick={() => {
-                                    setNoResults(false);
+                                    setError(null);
+                                    setNoCards(false);
                                     setSelectedFile(null);
                                     setPreview(null);
+                                    setCards(null);
+                                    setInsights(null);
+                                    setDetectedCard(null);
                                 }}
                             >
-                                Try Another Card
+                                Try Again
                             </button>
                         </div>
                     )}
 
-                    {results && results.result && results.result.length > 0 && (
+                    {cards && cards.length > 0 && (
                         <div className="results-content">
                             <div className="results-header">
                                 <h2>
                                     <span className="results-icon">◓</span>
-                                    Found {results.result.length} Listings - Sorted by Price (Highest to Lowest)
+                                    Found {cards.length} Listings - Sorted by Price (Highest to Lowest)
                                 </h2>
                                 <span className="results-badge">eBay</span>
                             </div>
+                            <p style={{ fontSize: '10px', color: '#364b3b89', textAlign: 'center' }}>
+                                Results may be inaccurate if the detected card name or number is not similar enough to the intended card.
+                            </p>
+
+                            {(insights) && (
+                            <div className="insights-section">
+                                <div className="insights-grid">
+                                    <div className="insight-card">
+                                        <span className="insight-label">Detected Card</span>
+                                        <span className="insight-value">
+                                            {detectedCard?.name || 'Unknown'} #{detectedCard?.number || '???'}
+                                        </span>
+                                    </div>
+                                    <div className="insight-card">
+                                        <span className="insight-label">Sum of Card Prices</span>
+                                        <span className="insight-value">£{insights.total?.toFixed(2) || '0.00'}</span>
+                                    </div>
+                                    <div className="insight-card">
+                                        <span className="insight-label">Average Card Price</span>
+                                        <span className="insight-value">£{insights.avg?.toFixed(2) || '0.00'}</span>
+                                    </div>
+                                    <div className="insight-card">
+                                        <span className="insight-label">Card Price Range</span>
+                                        <span className="insight-value">
+                                            £{insights.min?.toFixed(2) || '0.00'} - £{insights.max?.toFixed(2) || '0.00'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            )}
 
                             <div className="listings-list">
-                                {results.result.map((listing, index) => (
+                                {cards.map((listing, index) => (
                                     <div key={index} className="listing-card">
                                         <div className="listing-rank">
                                             #{index + 1}
@@ -237,6 +281,7 @@ const CardScanner = () => {
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="listing-link"
+                                                color="#29738e"
                                             >
                                                 View Listing &gt;&gt;
                                             </a>
@@ -247,7 +292,7 @@ const CardScanner = () => {
                         </div>
                     )}
 
-                    {!isLoading && !results && !error && !noResults &&(
+                    {!isLoading && !cards && !error && !noCards &&(
                         <div className="empty-state">
                             <div className="empty-dot-art">
                                 <pre style={{
@@ -255,7 +300,7 @@ const CardScanner = () => {
                                     whiteSpace: 'pre',
                                     lineHeight: '1.2',
                                     fontSize: '8px',
-                                    color: '#95a5a6',
+                                    color: '#29738e',
                                     margin: 0,
                                     padding: 0,
                                     userSelect: 'none',
