@@ -26,6 +26,10 @@ As per, emojis/ASCII art from https://emojicombos.com/ !
     npm run dev
     ```
 
+Once front-end and back-end are running, check localhost for front-end to use the web app!
+
+- Test data (cards) can be found in the project folder (./data/...). I haven't tried using actual photos of cards yet (and the current algorithm is "fine-tuned" for this perfect dataset), so use these for now while I work on that :p at the end of the day, its a demo
+
 
 ## Files and directories
 - `backend/app.py`: Simple backend Flask app with a single route for running the processing pipeline.
