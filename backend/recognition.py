@@ -15,15 +15,17 @@ def test():
 
     # IMPORT ALL IMAGES FROM DATASET ----------------------------
 
-    images = glob('.\\data\\prismatic-evolutions\\*')
+    images = glob('..\\data\\prismatic-evolutions\\*')
 
     # GET TEST IMAGE --------------------------------------------
 
-    test_path = images[161]
-    test_filename = images[161].split('\\')[-1]
+    test_image_cardnum = 161
+
+    test_path = images[test_image_cardnum - 1] #bcs 0-index
+    test_filename = images[test_image_cardnum - 1].split('\\')[-1]
 
     img = cv2.imread(test_path)
-    img = cv2.resize(img, (img.shape[1]*3, img.shape[0]*3), interpolation=cv2.INTER_CUBIC)
+    img = cv2.resize(img, (733, 1024), interpolation=cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     logger.info('Filepath: %s', test_path)
@@ -31,13 +33,20 @@ def test():
 
     # SECTIONS ---------------------------------------------------
 
-    name_section = img[0:140*3, 0:500*3].copy()
-    name_section = cv2.cvtColor(name_section, cv2.COLOR_RGB2GRAY)
-    _, name_section = cv2.threshold(name_section, 40, 255, cv2.THRESH_BINARY_INV)
+    name_resize_factor = 2
+    number_resize_factor = 4
 
-    number_section = img[960*3:1000*3, 115*3:205*3].copy()
-    number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
-    _, number_section = cv2.threshold(number_section, 30, 255, cv2.THRESH_BINARY_INV)
+    name_section = img[0:140, 0:500].copy()
+    name_section = cv2.resize(name_section, (500*name_resize_factor, 140*name_resize_factor), interpolation=cv2.INTER_CUBIC)
+    #name_section = cv2.cvtColor(name_section, cv2.COLOR_RGB2GRAY)
+    _, name_section = cv2.threshold(name_section, 40, 255, cv2.THRESH_BINARY)
+    name_section = cv2.medianBlur(name_section, 3)
+    
+
+    number_section = img[960:1000, 115:205].copy()
+    number_section = cv2.resize(number_section, (90*number_resize_factor, 40*number_resize_factor), interpolation=cv2.INTER_CUBIC)
+    #number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
+    _, number_section = cv2.threshold(number_section, 40, 255, cv2.THRESH_BINARY)
 
     # GET RESULTS FROM EASYOCR -----------------------------------
 
@@ -78,22 +87,35 @@ def test():
 
 
 def process_card(card_file):
+    """
+    Process a card image file and extract name and number information.
+
+    Args:
+        card_file: An image object representing the card image (accepts jpg, png, ...)
+    Returns:
+        A tuple containing the extracted name and number as strings.
+    """
     logger.info("Processing card...")
     
     file = card_file.read()
     npimg = np.frombuffer(file, np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR_RGB)
-    img = cv2.resize(img, (733*3, 1024*3), interpolation=cv2.INTER_CUBIC)
+    img = cv2.resize(img, (733, 1024), interpolation=cv2.INTER_CUBIC)
 
-    name_section = img[0:140*3, 0:500*3].copy()
-    name_section = cv2.cvtColor(name_section, cv2.COLOR_RGB2GRAY)
-    _, name_section = cv2.threshold(name_section, 40, 255, cv2.THRESH_BINARY_INV)
-    name_section = cv2.medianBlur(name_section, 5)
+    name_resize_factor = 2
+    number_resize_factor = 4
 
-    number_section = img[960*3:1000*3, 115*3:205*3].copy()
-    number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
-    _, number_section = cv2.threshold(number_section, 30, 255, cv2.THRESH_BINARY_INV)
-    number_section = cv2.medianBlur(number_section, 5)
+    name_section = img[0:140, 0:500].copy()
+    name_section = cv2.resize(name_section, (500*name_resize_factor, 140*name_resize_factor), interpolation=cv2.INTER_CUBIC)
+    #name_section = cv2.cvtColor(name_section, cv2.COLOR_RGB2GRAY)
+    _, name_section = cv2.threshold(name_section, 40, 255, cv2.THRESH_BINARY)
+    name_section = cv2.medianBlur(name_section, 3)
+    
+    # NOTE: Number section is more important than name, might not even need name for searching the specific card
+    number_section = img[960:1000, 115:205].copy()
+    number_section = cv2.resize(number_section, (90*number_resize_factor, 40*number_resize_factor), interpolation=cv2.INTER_CUBIC)
+    #number_section = cv2.cvtColor(number_section, cv2.COLOR_RGB2GRAY)
+    _, number_section = cv2.threshold(number_section, 40, 255, cv2.THRESH_BINARY)
 
     reader = easyocr.Reader(['en'], gpu=True)
 
