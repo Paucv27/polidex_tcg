@@ -1,162 +1,185 @@
+import logging
+import time
+from fake_useragent import UserAgent
+import requests
 from bs4 import BeautifulSoup
 from rapidfuzz import fuzz
-from utils import meanPrice, getStats
-from playwright.sync_api import sync_playwright
-#cheerio equivalent for python = package for web scraping that turns info to json instead of html ?
+from utils import getStats
+#cheerio equivalent for python = package for web scraping that turns info to json instead of html
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def inputCardInfo():
+SIMILARITY_THRESHOLD=70
+
+def fetchListings(cardName, cardNumber) -> dict:
     """
-    Get user input in terminal for card name, promo and number
-    These are stored as global variables
-    """
-    
-    global cardName, cardNumber
-    
-    cardName = input("Input card name: ")
-
-    cardNumber = input("Input card number: ")
-
-
-def formatCardInfo(name,number):
-    """
-    Formats card info replacing spaces with '+' so they can be used in the search
+    Uses card name and number to search eBay for recently sold listings. 
+    Might get blocked by bot checks or fail because of a change in html structure (check soup.txt).
 
     Args:
-        name (str): Name of the card (e.g. Politoed EX)
-        number (str): Number of the card in the set
+        cardName (str): Detected card name from the image.
+        cardNumber (str): Detected card number from the image.
 
     Returns:
-        str: Formatted string
+        dict: A dictionary containing: 'detected': The detected name and number, 'cards': The fetched listings, and 'stats': Price statistics about the fetched listings. 
+        Returns an empty dictionary if the request failed or was blocked by eBay's bot checker.
     """
     
-    return f"{(name+"+"+number).replace(' ','+')}"
+    url, headers = setUrlAndHeaders(cardName, cardNumber)
 
+    logger.info("Searching for: %s", url)
 
-def fetchListings(cardName,cardNumber):
-    """
-    Scrapes ebay search for top 5 matches of the specified card (in order of most recently sold)
-
-    Args:
-        cardName (str): Card Name
-        cardNumber (str): Card Number in Set
-
-    Returns:
-        List[dict]: Fetched listings in dict format
-    """
-
-    SIMILARITY_THRESHOLD=65
-
-    #setUrlAndHeaders(cardName,cardNumber)
-    url = f"https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{cardName}+{cardNumber}&LH_Complete=1&LH_Sold=1".replace(" ","")
+    # headers dict is used to spoof a visit to the page
+    session = requests.Session()
+    session.headers.update(headers)    
     
-    print("Searching for: ",url)
-    
-    # scrapes the whole html page specified in the url (containing the formatted card info)
-
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(headless=True)  
-        # headless=True means no window pops up
-        page = browser.new_page()
-
-        # helps avoid bot detection
-        page.set_extra_http_headers({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-            "Accept-Language": "en-GB,en;q=0.9"
-        })
-
-        page.goto(url)
-
-        # waits until at least one listing appears instead of the captcha page
-        page.wait_for_selector("li.s-card", timeout=10000)
-
-        html = page.content()
-
-        soup = BeautifulSoup(html, "html.parser")
+    try:        
+        # quick request to ebay to get cookies, otherwise the main request could be blocked
+        session.get("https://www.ebay.co.uk", timeout=10)
+        # scrapes the whole html page specified in the url (containing the formatted card info)
+        response = session.get(url, timeout=10)
         
-        print(page.url)
+        if response.status_code == 200:
+            logger.info("Running parser...")
             
-        if "splashui/challenge" in page.url:
-            print("BLOCKED BY CAPTCHA")
-            return
-        
-        print("finding listings")
-        # had to dig in the html code for this smh my head
-        # should make this broader but right now this works for testing
-        listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--dark-solt-links-blue s-card--overflow")
-        
-        cards=[]
-        
-        print("running loop...")
-
-        for listing in listings: 
+            # parses the html to a BeautifulSoup object, which represents the document as a nested data structure
+            soup = BeautifulSoup(response.text, "html.parser")
+            with open("soup.txt", "w", encoding="utf-8") as file:
+                logger.info("Writing soup to soup.txt...")
+                file.write(soup.prettify())
+                file.close()
+                
+            # ERRORS:
+            # 1. Sometimes scraper gets blocked by bot checker
+            # 2. classname keeps changing, so need to search the html structure for the actual class name
+            listings = soup.find_all("li", class_="s-card s-card--horizontal s-card--pagination-below s-card--overflow s-card--overflow__bottom s-card--su-overflow")
+            if not listings:
+                logger.error("Probably blocked by Bot checker :( -> check soup.txt for actual HTML structure or wait a bit before retrying")
+                return {
+                    "error": "Failed to fetch listings, possibly blocked by eBay's bot checker. Check soup.txt for actual HTML structure or wait a bit before retrying.", 
+                    "detected": {
+                        "name": cardName, 
+                        "number": cardNumber
+                    }
+                }
             
-            # same issue here, these classes are too specific and change frequently so I need a broader solution
-            title_span = listing.find("span", class_="su-styled-text primary default")
-            title = title_span.text.strip() if title_span else "N/A"
-            print("Title: ", title)
-
-            price_span = listing.find("span", class_="su-styled-text positive bold large-1 s-card__price")
-            price = price_span.text.strip() if price_span else "£0.00"
-            print("Price: ", price)
-
-            link_a = listing.find("a", class_="su-link")
-            link = link_a["href"] if link_a else "N/A"
-            print("Link: ", link)
-
-            sold_date_span = listing.find("span", class_="su-styled-text positive default")
-            sold_date = sold_date_span.text.strip() if sold_date_span else "N/A"
-            print("Date Sold: ", sold_date)
-            
-            # only if they exist
-            if title and price and link and not "to" in price:
+            cards = []
+            for listing in listings:
                 
-                print("COMPARING :",cardName+" "+cardNumber,"\nCOMPARING:", title)
+                # these also keep changing
+                title = listing.select_one(".s-card__title").text
+                price = listing.select_one(".s-card__price").text
+                link = listing.find("a", class_="s-card__link")["href"]
+                sold_date = listing.select_one(".s-card__caption").text
                 
-                # only append to resulting list if this comparison returns a similarity score of 70 or more
-                # without this I would get results for other cards, such as a Houndoom (not searching for this)
-                # or I would not include cards that have 1 wrong letter in the name, such as Houndoor (searching for this)
-                similarityScore = round(fuzz.partial_ratio(cardName.lower()+' '+cardNumber, title.lower()),2)
-                print("Score: ",similarityScore)
+                logger.debug("Card: %s", title)
+                logger.debug("Info: %s | %s | %s", price, link, sold_date)
                 
-                if similarityScore >= SIMILARITY_THRESHOLD:
+                # only if they exist
+                if title and price and link and not "to" in price:
+                    # only append to resulting list if this comparison returns a similarity score of 70 or more
+                    # without this I would get results for other cards, such as a Houndoom (not searching for this)
+                    # or I would not include cards that have 1 wrong letter in the name, such as Houndoor (searching for this)
+                    similarityScore = round(fuzz.partial_ratio(cardName.lower()+' '+cardNumber, title.lower()),2)
+                    logger.debug("Similarity Score (2dp): %s", similarityScore)
+
+                    if similarityScore >= SIMILARITY_THRESHOLD:
+                        logger.debug("^^^^^^^^^ card added to return list ^^^^^^^^^\n")
                     
-                    print("MATCH WITH ",similarityScore,"%\nADDED TO RETURN LIST"+"! - "*50)
-                
-                    cards.append({
-                        "title": title,
-                        "price": price,
-                        "link": link,
-                        "date_sold": sold_date if sold_date else "Unknown",
-                        "similarity": similarityScore
-                    })
+                        cards.append({
+                            "title": title,
+                            "price": float(price.replace(",","").replace("£","")), # only accepts gbp for now, otherwise will throw an error
+                            "link": link,
+                            "date_sold": sold_date if sold_date else "Unknown",
+                            "similarity": similarityScore,
+                        })
+                        
+                    if len(cards) >= 10:
+                        break
                     
-                # so only the first 5 matching listings are stored (for now)
-                if len(cards) >= 5:
-                    break
-                
-            print("\n======================================\n")
-                
-        cards = sorted(cards, key=lambda x: float(x["price"].replace("£","")), reverse=True)
-        
-        printFormatted(cards)
-        
-        getStats(cards) # gotta send this to front-end too
+            if not cards:
+                logger.error("No listings found with sufficient similarity to the detected card name and number.")
+                return {
+                    "error": "No listings found with sufficient similarity to the detected card name and number.",
+                    "detected": {
+                        "name": cardName, 
+                        "number": cardNumber
+                    }
+                }
 
-        browser.close()
-        
-        return cards
+            cards = sorted(cards, key=lambda x: x["price"], reverse=True)
+            total, avg, min, max = getStats(cards)
+            logger.debug(printFormatted(cards))
+            
+            result = {
+                "detected": {
+                    "name": cardName,
+                    "number": cardNumber
+                },
+                "cards": cards,
+                "stats": {
+                    "total": total,
+                    "avg": avg,
+                    "min": min,
+                    "max": max
+                }
+            }
+            
+            return result
+        else:
+            return {
+                "error": f"Request failed with status code {response.status_code}", 
+                "detected": {
+                    "name": cardName, 
+                    "number": cardNumber
+                    }
+                }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request exception: {e}")
+        return {
+            "error": f"Request exception: {e}", 
+            "detected": {
+                "name": cardName, 
+                "number": cardNumber
+                }
+            }
 
+    
+def setUrlAndHeaders(cardName, cardNumber):
+
+    # maybe switch to ebay API
+    url = f'https://www.ebay.co.uk/sch/i.html?_nkw=pokemon+tcg+{(cardName+"+"+cardNumber).replace(' ','+')}&LH_Complete=1&LH_Sold=1'
+
+    # so ebay doesnt block my requests as this is a program and not me, this mimics "me"
+    # temp
+    ua = UserAgent()
+    
+    headers = {
+        "User-Agent": ua.random,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Cache-Control": "max-age=0",
+    }
+    
+    return url, headers
+    
 
 def printFormatted(cards):
+    logger.info("Printing formatted cards...")
     
     print("\n................. CARDS FETCHED ..................\n")
-    
     for card in cards:
-        
-        print(f"Name: {card["title"]}\nPrice: {card["price"]}\nLink: {card["link"]}\nDate Sold: {card["date_sold"]}\nSimilarity: {card["similarity"]}")
-        print("\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_\n")
+        print(f"Name: {card['title']}\nPrice: {card['price']}\nLink: {card['link']}\nDate Sold: {card['date_sold']}\nSimilarity: {card['similarity']}")
+        print("\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_\n")
     
     
 #for testing

@@ -17,13 +17,13 @@ def process_image():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    print("PROCSSING CARD")
     name, number = process_card(file)
-
-    print("NOW FETCHING LISTINGS")
     result = fetchListings(name, number)
-
-    return jsonify({"result": result})
+    
+    if result.get("error"):
+        return jsonify(result), 500
+    
+    return jsonify(result), 200
 
 if __name__ == "__main__":
     app.run(debug=True)

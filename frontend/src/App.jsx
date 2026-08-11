@@ -1,14 +1,7 @@
-import SubmitCardFrom from './SubmitCardForm'
+import CardScanner from './CardScanner'
 
 function App() {
-
-  return (
-    <>
-
-      <SubmitCardFrom/>
-    
-    </>
-  )
+  return <CardScanner />
 }
 
 export default App;
